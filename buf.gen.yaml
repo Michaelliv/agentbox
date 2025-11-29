@@ -1,0 +1,17 @@
+version: v2
+managed:
+  enabled: true
+plugins:
+  # Python protobuf messages
+  - remote: buf.build/protocolbuffers/python
+    out: gen/python
+
+  # Python gRPC stubs (for compatibility)
+  - remote: buf.build/grpc/python
+    out: gen/python
+
+  # TypeScript protobuf messages with Connect (v2)
+  - local: protoc-gen-es
+    out: gen/ts
+    opt:
+      - target=ts

@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package sandbox.v1;
+
+// Sandbox service for executing code in isolated containers
+service SandboxService {
+  // Create a new sandbox session
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+
+  // Destroy an existing session
+  rpc DestroySession(DestroySessionRequest) returns (DestroySessionResponse);
+
+  // Get session info
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+
+  // List all active sessions
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+
+  // Execute a command (unary - wait for completion)
+  rpc Exec(ExecRequest) returns (ExecResponse);
+
+  // Execute a command with streaming output
+  rpc ExecStream(ExecStreamRequest) returns (stream ExecStreamResponse);
+
+  // Write a file to the sandbox
+  rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
+
+  // Read a file from the sandbox
+  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+
+  // Install Python packages
+  rpc PipInstall(PipInstallRequest) returns (ExecResponse);
+}
+
+// Session messages
+message CreateSessionRequest {
+  optional string session_id = 1;
+  optional string tenant_id = 2;
+  // List of allowed egress hosts (e.g., "pypi.org", "github.com")
+  // If empty or not specified, defaults to package registries and GitHub
+  // Note: proto3 cannot distinguish empty from unset, so both use defaults.
+  // To disable network, use a non-routable host like "localhost".
+  repeated string allowed_hosts = 3;
+}
+
+message CreateSessionResponse {
+  SessionInfo session = 1;
+}
+
+message DestroySessionRequest {
+  string session_id = 1;
+}
+
+message DestroySessionResponse {
+  bool success = 1;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message GetSessionResponse {
+  SessionInfo session = 1;
+}
+
+message ListSessionsRequest {}
+
+message ListSessionsResponse {
+  repeated SessionInfo sessions = 1;
+}
+
+message SessionInfo {
+  string session_id = 1;
+  string container_id = 2;
+  double created_at = 3;
+  double last_activity = 4;
+  string status = 5;
+  optional string tenant_id = 6;
+  // List of allowed egress hosts for this session
+  repeated string allowed_hosts = 7;
+}
+
+// Exec messages
+message ExecRequest {
+  string session_id = 1;
+  string command = 2;
+  int32 timeout = 3;
+  string workdir = 4;
+}
+
+message ExecResponse {
+  int32 exit_code = 1;
+  string stdout = 2;
+  string stderr = 3;
+  bool timed_out = 4;
+}
+
+message ExecStreamRequest {
+  string session_id = 1;
+  string command = 2;
+  string workdir = 3;
+}
+
+message ExecStreamResponse {
+  // One of: stdout, stderr, exit, error
+  string type = 1;
+  string data = 2;
+  optional int32 exit_code = 3;
+}
+
+// File messages
+message WriteFileRequest {
+  string session_id = 1;
+  string path = 2;
+  string content = 3;
+  string mode = 4;  // "w" or "a"
+}
+
+message WriteFileResponse {
+  bool success = 1;
+  optional string error = 2;
+}
+
+message ReadFileRequest {
+  string session_id = 1;
+  string path = 2;
+}
+
+message ReadFileResponse {
+  bool success = 1;
+  optional string content = 2;
+  optional string error = 3;
+}
+
+// Pip messages
+message PipInstallRequest {
+  string session_id = 1;
+  repeated string packages = 2;
+}

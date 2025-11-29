@@ -1,0 +1,48 @@
+{
+  "name": "@agentbox/client",
+  "version": "0.1.0",
+  "description": "TypeScript client for agentbox - sandboxed code execution for AI agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "license": "MIT",
+  "author": "agentbox contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Michaelliv/agentbox.git",
+    "directory": "ts-client"
+  },
+  "bugs": {
+    "url": "https://github.com/Michaelliv/agentbox/issues"
+  },
+  "homepage": "https://github.com/Michaelliv/agentbox#readme",
+  "keywords": [
+    "sandbox",
+    "container",
+    "ai",
+    "agent",
+    "code-execution",
+    "grpc",
+    "connect-rpc"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.0.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.0.0",
+    "@connectrpc/connect-web": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
