@@ -15,16 +15,15 @@ Requires the gRPC server to be running (make dev).
 """
 
 import argparse
-import asyncio
 import gc
 import statistics
 import subprocess
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
 import grpc
+import plotext as plt
 from sandbox.v1 import sandbox_pb2, sandbox_pb2_grpc
 
 
@@ -60,16 +59,12 @@ class BenchmarkResult:
         idx = int(len(sorted_samples) * 0.95)
         return sorted_samples[min(idx, len(sorted_samples) - 1)]
 
-    def __str__(self) -> str:
+    def stats_str(self) -> str:
         return (
-            f"{self.name}:\n"
-            f"  Mean:   {self.mean:>8.2f} {self.unit}\n"
-            f"  Median: {self.median:>8.2f} {self.unit}\n"
-            f"  Std:    {self.std_dev:>8.2f} {self.unit}\n"
-            f"  Min:    {self.min:>8.2f} {self.unit}\n"
-            f"  Max:    {self.max:>8.2f} {self.unit}\n"
-            f"  P95:    {self.p95:>8.2f} {self.unit}\n"
-            f"  Samples: {len(self.samples)}"
+            f"  Mean: {self.mean:.2f} {self.unit} | "
+            f"Median: {self.median:.2f} {self.unit} | "
+            f"P95: {self.p95:.2f} {self.unit} | "
+            f"Min: {self.min:.2f} | Max: {self.max:.2f}"
         )
 
 
@@ -226,20 +221,102 @@ def benchmark_concurrent_sessions(
     return results
 
 
-def print_summary(results: dict):
-    """Print benchmark summary."""
-    print("\n" + "=" * 60)
-    print("BENCHMARK SUMMARY")
-    print("=" * 60)
+def plot_histogram(result: BenchmarkResult, title: str):
+    """Plot a histogram of samples."""
+    plt.clear_figure()
+    plt.hist(result.samples, bins=15)
+    plt.title(title)
+    plt.xlabel(f"Latency ({result.unit})")
+    plt.ylabel("Frequency")
+    plt.theme("pro")
+    plt.plot_size(80, 15)
+    plt.show()
+    print(result.stats_str())
 
-    for result in results.values():
-        if isinstance(result, BenchmarkResult):
-            print(f"\n{result}")
+
+def plot_line(x: list, y: list, title: str, xlabel: str, ylabel: str):
+    """Plot a line chart."""
+    plt.clear_figure()
+    plt.plot(x, y, marker="braille")
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.theme("pro")
+    plt.plot_size(80, 15)
+    plt.show()
+
+
+def plot_bar(labels: list[str], values: list[float], title: str, ylabel: str):
+    """Plot a bar chart."""
+    plt.clear_figure()
+    plt.bar(labels, values)
+    plt.title(title)
+    plt.ylabel(ylabel)
+    plt.theme("pro")
+    plt.plot_size(80, 15)
+    plt.show()
+
+
+def print_summary(results: dict):
+    """Print benchmark summary with graphs."""
+    print("\n" + "=" * 80)
+    print("BENCHMARK RESULTS")
+    print("=" * 80)
+
+    # Cold start histogram
+    if "cold_start" in results:
+        print("\n")
+        plot_histogram(results["cold_start"], "Cold Start Latency Distribution")
+
+    # Exec latency histogram
+    if "exec" in results:
+        print("\n")
+        plot_histogram(results["exec"], "Command Execution Latency Distribution")
+
+    # Memory bar chart
+    if "memory" in results:
+        print("\n")
+        mem_result = results["memory"]
+        labels = [f"S{i+1}" for i in range(len(mem_result.samples))]
+        plot_bar(labels, mem_result.samples, "Memory Usage per Session", "Memory (MB)")
+        print(f"  Average: {mem_result.mean:.1f} MB per session")
+
+    # Concurrent sessions line chart
+    if "concurrent" in results:
+        print("\n")
+        concurrent = results["concurrent"]
+        x = [c[0] for c in concurrent]
+        y = [c[1] for c in concurrent]
+        plot_line(x, y, "Latency vs Concurrent Sessions", "Sessions", "Latency (ms)")
+
+    # Summary table
+    print("\n" + "=" * 80)
+    print("SUMMARY TABLE")
+    print("=" * 80)
+    print(f"{'Metric':<30} {'Value':>15} {'Unit':<10}")
+    print("-" * 60)
+
+    if "cold_start" in results:
+        r = results["cold_start"]
+        print(f"{'Cold Start (median)':<30} {r.median:>15.2f} {'ms':<10}")
+        print(f"{'Cold Start (p95)':<30} {r.p95:>15.2f} {'ms':<10}")
+
+    if "exec" in results:
+        r = results["exec"]
+        print(f"{'Exec Latency (median)':<30} {r.median:>15.2f} {'ms':<10}")
+        print(f"{'Exec Latency (p95)':<30} {r.p95:>15.2f} {'ms':<10}")
+
+    if "memory" in results:
+        r = results["memory"]
+        print(f"{'Memory per Session':<30} {r.mean:>15.1f} {'MB':<10}")
 
     if "concurrent" in results:
-        print("\nConcurrent Sessions Scaling:")
-        for count, latency in results["concurrent"]:
-            print(f"  {count:>3} sessions: {latency:>8.2f} ms avg exec latency")
+        concurrent = results["concurrent"]
+        if concurrent:
+            first = concurrent[0]
+            last = concurrent[-1]
+            print(f"{'Latency @ {0} sessions'.format(first[0]):<30} {first[1]:>15.2f} {'ms':<10}")
+            print(f"{'Latency @ {0} sessions'.format(last[0]):<30} {last[1]:>15.2f} {'ms':<10}")
 
 
 def main():
@@ -254,9 +331,9 @@ def main():
     stub = get_stub()
     results = {}
 
-    print("=" * 60)
+    print("=" * 80)
     print("AGENTBOX BENCHMARK")
-    print("=" * 60)
+    print("=" * 80)
 
     if "cold" not in args.skip:
         results["cold_start"] = benchmark_cold_start(stub, args.cold_start_iterations)
