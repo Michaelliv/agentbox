@@ -1,4 +1,4 @@
-.PHONY: build dev test test-ts test-integration clean proto
+.PHONY: build dev test test-ts test-integration benchmark clean proto
 
 # Build the sandbox image
 build-sandbox:
@@ -44,6 +44,10 @@ test-ts:
 # Run integration tests (requires server running)
 test-integration:
 	PYTHONPATH=gen/python uv run python -m pytest tests/test_integration.py -v
+
+# Run benchmarks (requires server running)
+benchmark:
+	PYTHONPATH=gen/python uv run python scripts/benchmark.py
 
 # Clean up containers and images
 clean:
