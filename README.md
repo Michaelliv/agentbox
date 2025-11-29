@@ -7,16 +7,16 @@ Run untrusted code safely in isolated containers with controlled network access.
 ## Architecture
 
 ```
-┌─────────────┐     gRPC      ┌─────────────────┐     HTTP      ┌─────────────────────┐
-│   Client    │──────────────▶│   gRPC Server   │──────────────▶│  Container:2024     │
-│  (TS/Python)│               │  (SandboxManager)│               │  (process_api)      │
-└─────────────┘               └─────────────────┘               └─────────────────────┘
-                                      │                                   │
-                                      ▼                                   ▼
-                              ┌─────────────────┐               ┌─────────────────────┐
-                              │  Egress Proxy   │◀──────────────│  HTTP_PROXY env     │
-                              │  (JWT allowlist)│               │  (pip, git, etc.)   │
-                              └─────────────────┘               └─────────────────────┘
+┌─────────────┐     gRPC      ┌──────────────────┐     HTTP      ┌─────────────────────┐
+│   Client    │──────────────▶│   gRPC Server    │──────────────▶│  Container:2024     │
+│ (TS/Python) │               │ (SandboxManager) │               │  (process_api)      │
+└─────────────┘               └──────────────────┘               └─────────────────────┘
+                                       │                                   │
+                                       ▼                                   ▼
+                              ┌──────────────────┐               ┌─────────────────────┐
+                              │   Egress Proxy   │◀──────────────│   HTTP_PROXY env    │
+                              │  (JWT allowlist) │               │  (pip, git, etc.)   │
+                              └──────────────────┘               └─────────────────────┘
 ```
 
 **Key components:**
